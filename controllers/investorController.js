@@ -1,5 +1,7 @@
 const asyncHandler = require('express-async-handler')
 const Investor= require('../models/InvestorModel')
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcryptjs')
 
 // get investors 
 const getInvestors = asyncHandler(async (req , res) => {
@@ -8,31 +10,69 @@ const getInvestors = asyncHandler(async (req , res) => {
 })
 //create investor
 const SetInvestor = asyncHandler( async (req , res) => {
-    if (!req.body.firstName) {
+    if (!req.body.username|| !req.body.email || !req.body.password) {
         res.status(400)
         throw new Error('investor can t be empty ')
       }
+
+    const investorExists = await Investor.findOne(req.body.email.value)
+
+    if (!investorExists) {
+      res.status(400)
+      throw new Error('User already exists')
+    }
+    
+    const salt = await bcrypt.genSalt(10)
+  const hashedPassword = await bcrypt.hash(req.body.password, salt)
+  req.body.password=hashedPassword
+
+    const investor = await Investor.create(req.body)
+
+    if (investor) {
+      res.status(201).json({
+        _id: investor.id,
+        username: investor.username,
+        email: investor.email,
+        token: generateToken(investor._id),
+      })
+    } else {
+      res.status(400)
+      throw new Error('Invalid user data')
+    }
     
 
     
-    const investor = await Investor.create({
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      email: req.body.email ,
-      password: req.body.password,
-      sexe: req.body.sexe,
-      datOfBirth: req.body.datOfBirth,
-      adress: req.body.adress,
-      phoneNumber: req.body.phoneNumber,
-      accreditationStatus: req.body.accreditationStatus,
-      centerOfInterest: req.body.centerOfInterest,
-      image: req.body.image
-    })
-    
-
-    
-    res.status(200).json(investor)
+   
 })
+
+
+const loginInvestor = asyncHandler(async(req , res )=>{
+  const { email, password } = req.body
+
+  // Check for user email
+  const investor = await Investor.findOne({ email })
+
+  if (investor && (await bcrypt.compare(password, investor.password))) {
+    res.json({
+      _id: investor.id,
+      name: investor.username,
+      email: investor.email,
+      token: generateToken(investor._id),
+    })
+  } else {
+    res.status(400)
+    throw new Error('Invalid credentials')
+  }
+
+})
+
+
+// Generate JWT
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d',
+  })
+}
 
 //update investor
 const UpdateInvestor = asyncHandler(async (req , res) => {
@@ -70,5 +110,5 @@ const findInvestorById = asyncHandler ( async(req , res) => {
 })
 
 module.exports = {
-    getInvestors, SetInvestor ,UpdateInvestor ,DeleteInvestor, findInvestorById
+    getInvestors, SetInvestor ,UpdateInvestor ,DeleteInvestor, findInvestorById , loginInvestor
 }

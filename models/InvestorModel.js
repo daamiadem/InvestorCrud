@@ -2,7 +2,26 @@ const mongoose = require('mongoose')
 
 const investorSchema = mongoose.Schema({
 
-    
+    username: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    password: {
+        type: String,
+        required: true
+    },
+    email: {
+        type: String,
+        required: true,
+        trim: true,
+        validate(value) {
+          if (!value.match(/^[^@ ]+@[^@ ]+\.[^@ .]{2,}$/)) {
+            throw new Error('Email is not valid.');
+          }
+        },
+        unique: true
+    },
       
     firstName: {
         type: String,
@@ -14,20 +33,9 @@ const investorSchema = mongoose.Schema({
         required: [true, "Please enter your last name!"],
         trim: true
     },
-    email: {
-        type: String,
-        required: true,
-        trim: true,
-        validate(value) {
-          if (!value.match(/^[^@ ]+@[^@ ]+\.[^@ .]{2,}$/)) {
-            throw new Error('Email is not valid.');
-          }
-        }
-      },
-    password: {
-        type: String,
-        required: [true, "Please enter your password!"]
-    },
+    
+    
+    
     sexe: {
         type: String,
         required: [true, "Please enter your sexe!"]
